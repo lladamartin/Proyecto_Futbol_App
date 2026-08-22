@@ -54,9 +54,7 @@ try:
         # --- (Tu lógica de cálculo de puntos y resultados aquí) ---
         # Nota: Asegúrate de que las columnas coincidan con las tablas de Supabase
         
-        year_key = 2026
-        fechas_jugadas_all = sorted(df_fecha_player[df_fecha_player['fecha'].dt.year == year_key]['fecha'].unique(), reverse=True)
-
+        fechas_jugadas_all = sorted(df_fecha_player['fecha'].unique(), reverse=True)
     # --- TABS ---
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "⚽ Resultados por Fecha", "📊 Resumen y Tabla", "💬 Encuesta (Votar)", 
