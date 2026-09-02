@@ -377,7 +377,7 @@ try:
                     else:
                         nuevo_registro = {
                             "fecha": f_admin,
-                            "player_nickname": jugador_input,
+                            "nickname": jugador_input,
                             "equipo": equipo_input,
                             "goles": goles_input
                         }
@@ -401,7 +401,7 @@ try:
                         st.error("El apodo / nickname no puede estar vacío.")
                     else:
                         data_jugador = {
-                            "player_nickname": nuevo_nick.strip(),
+                            "nickname": nuevo_nick.strip(),
                             "nombre": nuevo_nombre.strip(),
                             "apellido": nuevo_apellido.strip()
                         }
