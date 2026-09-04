@@ -62,7 +62,8 @@ try:
         if col_j_key != 'player_nickname':
             df_fecha_player['player_nickname'] = df_fecha_player[col_j_key]
             
-        df_fecha_player['fecha'] = pd.to_datetime(df_fecha_player['fecha'])
+        #df_fecha_player['fecha'] = pd.to_datetime(df_fecha_player['fecha'])
+        df_fecha_player['fecha'] = pd.to_datetime(df_fecha_player['fecha'], format='mixed', dayfirst=True)
         
         df_fecha_goles = df_fecha_player.groupby(['fecha', 'equipo'], as_index=False)['goles'].sum()
         df_pivot = df_fecha_goles.pivot(index='fecha', columns='equipo', values='goles').reset_index().fillna(0)
