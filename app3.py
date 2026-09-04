@@ -15,10 +15,6 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 st.set_page_config(page_title="Jueves del Cordero Susurrador", layout="wide", page_icon="⚽")
 
-df_tabla_general = pd.DataFrame()
-fechas_jugadas_all = []
-df_fecha_player = pd.DataFrame(columns=['fecha', 'player_nickname', 'equipo', 'goles'])
-
 # --- FUNCIONES DE BASE DE DATOS (SUPABASE) ---
 def run_query(table):
     try:
@@ -366,7 +362,8 @@ try:
             
             with st.form("carga_partido_admin"):
                 st.markdown("### Registrar Alineación y Goles")
-                f_admin = st.date_input("Fecha del Partido").strftime("%Y-%m-%d")
+                #f_admin = st.date_input("Fecha del Partido").strftime("%Y-%m-%d")
+                f_admin = st.date_input("Fecha del Partido").strftime("%d/%m/%Y")
                 
                 if len(lista_jugadores_db) > 0:
                     jugador_input = st.selectbox("Apodo / Nickname del Jugador", lista_jugadores_db)
