@@ -377,10 +377,10 @@ try:
                         st.error("Debes seleccionar o ingresar un jugador.")
                     else:
                         nuevo_registro = {
-                            "fecha": f_admin,
-                            "nickname": jugador_input,
-                            "equipo": equipo_input,
-                            "goles": goles_input
+                            "Fecha": f_admin,
+                            "Player_nickname": jugador_input,
+                            "Equipo": equipo_input,
+                            "Goles": goles_input
                         }
                         try:
                             insert_data("alineaciones", nuevo_registro)
@@ -402,7 +402,7 @@ try:
                         st.error("El apodo / nickname no puede estar vacío.")
                     else:
                         data_jugador = {
-                            "nickname": nuevo_nick.strip(),
+                            "Player_nickname": nuevo_nick.strip(),
                             "nombre": nuevo_nombre.strip(),
                             "apellido": nuevo_apellido.strip()
                         }
