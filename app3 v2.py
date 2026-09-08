@@ -15,43 +15,6 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 st.set_page_config(page_title="Jueves del Cordero Susurrador", layout="wide", page_icon="⚽")
 
-# --- DISEÑO AVANZADO Y ESTÉTICA GAMIFIED / DARK MODE ---
-st.markdown("""
-    <style>
-    .main { background-color: #0b0f19; }
-    
-    /* Tarjetas de estadísticas y contenedores con efecto glassmorphism */
-    .metric-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 15px;
-        border-radius: 12px;
-        text-align: center;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    }
-    
-    /* Tipografía y espaciados limpios */
-    h1, h2, h3 {
-        letter-spacing: -0.5px;
-        font-family: 'Inter', sans-serif;
-    }
-    
-    /* Estilo de pestañas modernas */
-    .stTabs [data-baseweb="tab-list"] {
-        justify-content: center;
-        gap: 12px;
-        background-color: rgba(255, 255, 255, 0.02);
-        padding: 10px;
-        border-radius: 12px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 8px;
-        padding: 8px 20px;
-        font-weight: 600;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 # --- FUNCIONES DE BASE DE DATOS (SUPABASE) ---
 def run_query(table):
     try:
@@ -81,8 +44,7 @@ def cargar_datos():
     return df_alineaciones, df_jugadores, df_form
 
 st.title("⚽ Juevezzz 💋")
-st.markdown("### *Registro futbolístico - Jueves del Cordero Susurrador*")
-st.markdown("---")
+st.markdown("### Registro futbolístico - Jueves del Cordero Susurrador")
 
 try:
     df_goals_date, df_players_db, df_form = cargar_datos()
@@ -128,6 +90,7 @@ try:
         fecha_last_six = ultima_fecha - timedelta(weeks=6)
         
         fechas_jugadas_all = sorted(df_fecha_player[df_fecha_player['fecha'].dt.year == year_key]['fecha'].unique(), reverse=True)
+        fechas_jugadas_count = len(fechas_jugadas_all)
 
         # --- PROCESAMIENTO GOOGLE FORM ---
         df_form_procesado = pd.DataFrame()
@@ -171,17 +134,14 @@ try:
     ])
 
     with tab1:
-        st.markdown("<h3 style='text-align: center;'>🏆 Resultados y Comentarios por Fecha</h3>", unsafe_allow_html=True)
+        st.subheader("Resultados y Comentarios por Fecha Seleccionada")
         if len(fechas_jugadas_all) > 0:
-            # Centrar el selector de fecha usando columnas simétricas
-            _, col_sel, _ = st.columns([1, 2, 1])
-            with col_sel:
-                fecha_sel = st.selectbox(
-                    "Elige la fecha del partido:", 
-                    fechas_jugadas_all, 
-                    format_func=lambda x: pd.to_datetime(x).strftime('%d de %B, %Y'),
-                    key="select_fecha_tab1"
-                )
+            fecha_sel = st.selectbox(
+                "Elige la fecha del partido:", 
+                fechas_jugadas_all, 
+                format_func=lambda x: pd.to_datetime(x).strftime('%d de %B, %Y'),
+                key="select_fecha_tab1"
+            )
             
             df_sel_goals = df_fecha_player[df_fecha_player['fecha'] == fecha_sel].copy()
             df_ultima_res = df_sel_goals.groupby('equipo')['goles'].sum().reset_index()
@@ -189,25 +149,19 @@ try:
             celeste_goles = df_ultima_res.loc[df_ultima_res['equipo'] == 'Celeste', 'goles'].values[0] if 'Celeste' in df_ultima_res['equipo'].values else 0
             naranja_goles = df_ultima_res.loc[df_ultima_res['equipo'] == 'Naranja', 'goles'].values[0] if 'Naranja' in df_ultima_res['equipo'].values else 0
             
-            # Marcador visual llamativo y centrado
-            m1, m2, m3, m4, m5 = st.columns([1, 2, 1, 2, 1])
-            with m2:
-                st.markdown(f"<div class='metric-card'><h2>🔵 Celeste</h2><h1 style='color: #4da6ff;'>{int(celeste_goles)}</h1></div>", unsafe_allow_html=True)
-            with m3:
-                st.markdown("<h2 style='text-align: center; padding-top: 30px; color: #888;'>VS</h2>", unsafe_allow_html=True)
-            with m4:
-                st.markdown(f"<div class='metric-card'><h2>🟠 Naranja</h2><h1 style='color: #ff9933;'>{int(naranja_goles)}</h1></div>", unsafe_allow_html=True)
-                
-            st.markdown(f"<p style='text-align: center; color: #aaa; margin-top: 15px;'>📅 Análisis del partido del {pd.to_datetime(fecha_sel).strftime('%d de %B, %Y')}</p>", unsafe_allow_html=True)
+            df_resultado_final = pd.DataFrame({'Celeste': [celeste_goles], 'Naranja': [naranja_goles]})
+            st.dataframe(df_resultado_final, use_container_width=True, hide_index=True)
+            st.markdown(f"**Fecha analizada:** {pd.to_datetime(fecha_sel).strftime('%d de %B, %Y')}")
             
             st.markdown("---")
-            st.markdown("<h4 style='text-align: center;'>📋 Alineación, Goles y Puntajes</h4>", unsafe_allow_html=True)
+            st.subheader("Alineación, Goles y Puntaje")
             
-            # --- OBTENCIÓN DE PUNTAJES ---
+            # --- OBTENCIÓN DE PUNTAJES (GOOGLE SHEETS Y SUPABASE) ---
             df_form_puntaje_sel = pd.DataFrame(columns=['jugador', 'puntaje'])
             lista_puntos_combinada = []
             f_target = pd.to_datetime(fecha_sel).date()
 
+            # 1. Google Sheets histórico
             if not df_form_procesado.empty and col_fecha_form:
                 df_form_procesado['fecha_form_date'] = pd.to_datetime(df_form_procesado[col_fecha_form]).dt.date
                 df_form2 = df_form_procesado[df_form_procesado['fecha_form_date'] == f_target].copy()
@@ -226,6 +180,7 @@ try:
                                     except:
                                         pass
 
+            # 2. Supabase (tabla encuestas)
             df_encuestas_sql = run_query("encuestas")
             if not df_encuestas_sql.empty and 'fecha' in df_encuestas_sql.columns:
                 df_encuestas_sql['fecha_dt'] = pd.to_datetime(df_encuestas_sql['fecha']).dt.date
@@ -239,6 +194,7 @@ try:
                         except:
                             pass
 
+            # Consolidar promedios de puntaje redondeados a entero (0 decimales)
             if len(lista_puntos_combinada) > 0:
                 df_p_raw = pd.DataFrame(lista_puntos_combinada)
                 df_form_puntaje_sel = df_p_raw.groupby('jugador', as_index=False)['puntaje'].mean()
@@ -280,18 +236,14 @@ try:
                     'Jugador (Celeste)': jugador_c, 'Goles (Celeste)': goles_c, 'Puntaje (Celeste)': puntaje_c
                 })
                 
-            df_alineacion_final = pd.DataFrame(alineacion_data)
+            st.dataframe(pd.DataFrame(alineacion_data), use_container_width=True, hide_index=True)
             
-            # Centrar la tabla usando contenedores de columnas simétricas (Truco definitivo en Streamlit)
-            _, col_table, _ = st.columns([0.5, 9, 0.5])
-            with col_table:
-                st.dataframe(df_alineacion_final, use_container_width=True, hide_index=True)
-            
-            # --- SECCIÓN DE COMENTARIOS ---
+            # --- SECCIÓN DE COMENTARIOS CON FILTRO POR JUGADOR ---
             st.markdown("---")
-            st.markdown("<h4 style='text-align: center;'>💬 Comentarios y Evaluaciones</h4>", unsafe_allow_html=True)
+            st.subheader("💬 Comentarios y Evaluaciones")
             
             lista_comentarios_combinados = []
+            
             if not df_encuestas_sql.empty and 'fecha' in df_encuestas_sql.columns:
                 df_sql_match = df_encuestas_sql[df_encuestas_sql['fecha_dt'] == f_target]
                 for _, row in df_sql_match.iterrows():
@@ -299,7 +251,11 @@ try:
                     comentario = row.get('comentario', '')
                     puntaje = row.get('puntaje', '')
                     if pd.notna(comentario) and str(comentario).strip() != "":
-                        lista_comentarios_combinados.append({'Jugador': evaluado, 'Puntaje': puntaje, 'Comentario': comentario})
+                        lista_comentarios_combinados.append({
+                            'Jugador': evaluado, 
+                            'Puntaje': puntaje, 
+                            'Comentario': comentario
+                        })
 
             if not df_form_procesado.empty and col_fecha_form:
                 df_form2 = df_form_procesado[df_form_procesado['fecha_form_date'] == f_target].copy()
@@ -314,82 +270,101 @@ try:
                                 j_val, c_val = row[cj], row[cc]
                                 p_val = row[cp] if cp else ""
                                 if pd.notna(j_val) and pd.notna(c_val) and str(c_val).strip() != "":
-                                    lista_comentarios_combinados.append({'Jugador': str(j_val).strip(), 'Puntaje': p_val if pd.notna(p_val) else "", 'Comentario': str(c_val).strip()})
+                                    lista_comentarios_combinados.append({
+                                        'Jugador': str(j_val).strip(), 
+                                        'Puntaje': p_val if pd.notna(p_val) else "", 
+                                        'Comentario': str(c_val).strip()
+                                    })
             
             if len(lista_comentarios_combinados) > 0:
                 df_comentarios_final = pd.DataFrame(lista_comentarios_combinados).drop_duplicates().reset_index(drop=True)
-                jugadores_disponibles = sorted(df_comentarios_final['Jugador'].dropna().unique().tolist())
                 
-                _, col_filtro, _ = st.columns([1, 2, 1])
-                with col_filtro:
-                    jugador_filtro = st.selectbox("Filtrar comentarios por jugador:", ["Todos los jugadores"] + jugadores_disponibles, key="filtro_jugador_comentarios_tab1")
+                jugadores_disponibles = sorted(df_comentarios_final['Jugador'].dropna().unique().tolist())
+                jugador_filtro = st.selectbox(
+                    "Filtrar comentarios por jugador (opcional):", 
+                    ["Todos los jugadores"] + jugadores_disponibles,
+                    key="filtro_jugador_comentarios_tab1"
+                )
                 
                 if jugador_filtro != "Todos los jugadores":
                     df_comentarios_final = df_comentarios_final[df_comentarios_final['Jugador'] == jugador_filtro]
                 
-                _, col_ctable, _ = st.columns([0.5, 9, 0.5])
-                with col_ctable:
-                    st.dataframe(df_comentarios_final, use_container_width=True, hide_index=True)
+                st.dataframe(df_comentarios_final, use_container_width=True, hide_index=True)
             else:
                 st.info("No hay comentarios registrados para esta fecha.")
         else:
             st.info("No hay partidos cargados.")
 
     with tab2:
-        st.markdown("<h3 style='text-align: center;'>📊 Tabla General de Posiciones (2026)</h3>", unsafe_allow_html=True)
+        st.subheader("Tabla General de Posiciones (2026)")
         if not df_tabla_general.empty:
-            df_tabla_renamed = df_tabla_general.rename(columns={
-                'player_nickname': 'Jugador', 'jugados': 'Jugados', 'ganados': 'Ganados',
-                'empatados': 'Empatados', 'perdidos': 'Perdidos', 'goles': 'Goles',
-                'puntos': 'Puntos', 'ultimos_partidos': 'Últimas Fechas'
-            })
-            _, col_gtbl, _ = st.columns([0.5, 9, 0.5])
-            with col_gtbl:
-                st.dataframe(df_tabla_renamed, use_container_width=True, hide_index=True)
+            st.dataframe(
+                df_tabla_general.rename(columns={
+                    'player_nickname': 'Jugador', 'jugados': 'Jugados', 'ganados': 'Ganados',
+                    'empatados': 'Empatados', 'perdidos': 'Perdidos', 'goles': 'Goles',
+                    'puntos': 'Puntos', 'ultimos_partidos': 'Últimas Fechas'
+                }),
+                use_container_width=True, hide_index=True
+            )
         else:
             st.info("No hay datos generales suficientes.")
 
     with tab3:
-        st.markdown("<h3 style='text-align: center;'>💬 Realizar Encuesta Post-Partido</h3>", unsafe_allow_html=True)
+        st.subheader("💬 Realizar Encuesta Post-Partido")
         col_jugador_db_key = next((c for c in ['player_nickname', 'nickname', 'nombre'] if not df_players_db.empty and c in df_players_db.columns), None)
         lista_jugadores_db = sorted(df_players_db[col_jugador_db_key].dropna().unique().tolist()) if not df_players_db.empty and col_jugador_db_key else []
         
         if len(fechas_jugadas_all) > 0 and len(lista_jugadores_db) > 0:
-            _, col_form, _ = st.columns([1, 2, 1])
-            with col_form:
-                with st.form("form_votacion_usuario", clear_on_submit=True):
-                    f_voto = st.selectbox("Fecha del partido a evaluar:", fechas_jugadas_all, format_func=lambda x: pd.to_datetime(x).strftime('%d de %B, %Y'), key="select_fecha_voto_tab3")
-                    evaluado_input = st.selectbox("¿A qué jugador querés calificar?", lista_jugadores_db, key="evaluado_usuario")
-                    puntaje_input = st.slider("Puntaje (1 al 10)", min_value=1, max_value=10, value=7, key="puntaje_usuario")
-                    comentario_input = st.text_area("Comentario / Justificación", key="comentario_usuario")
-                    
-                    enviar_voto = st.form_submit_button("Enviar Voto")
-                    if enviar_voto:
-                        data_voto = {"fecha": pd.to_datetime(f_voto).strftime('%Y-%m-%d'), "votante": "Anónimo", "evaluado": evaluado_input, "puntaje": puntaje_input, "comentario": comentario_input}
-                        try:
-                            insert_data("encuestas", data_voto)
-                            st.success("¡Tu voto ha sido registrado con éxito en Supabase!")
-                            st.cache_data.clear()
-                            st.rerun()
-                        except Exception as voto_err:
-                            st.error(f"Error al registrar el voto: {voto_err}")
+            with st.form("form_votacion_usuario", clear_on_submit=True):
+                f_voto = st.selectbox(
+                    "Selecciona la fecha del partido a evaluar:", 
+                    fechas_jugadas_all,
+                    format_func=lambda x: pd.to_datetime(x).strftime('%d de %B, %Y'),
+                    key="select_fecha_voto_tab3"
+                )
+                evaluado_input = st.selectbox("¿A qué jugador querés calificar?", lista_jugadores_db, key="evaluado_usuario")
+                puntaje_input = st.slider("Puntaje (1 al 10)", min_value=1, max_value=10, value=7, key="puntaje_usuario")
+                comentario_input = st.text_area("Comentario / Justificación", key="comentario_usuario")
+                
+                enviar_voto = st.form_submit_button("Enviar Voto")
+                if enviar_voto:
+                    data_voto = {
+                        "fecha": pd.to_datetime(f_voto).strftime('%Y-%m-%d'),
+                        "votante": "Anónimo",
+                        "evaluado": evaluado_input,
+                        "puntaje": puntaje_input,
+                        "comentario": comentario_input
+                    }
+                    try:
+                        insert_data("encuestas", data_voto)
+                        st.success("¡Tu voto ha sido registrado con éxito en Supabase!")
+                        st.cache_data.clear()
+                        st.rerun()
+                    except Exception as voto_err:
+                        st.error(f"Error al registrar el voto: {voto_err}")
         else:
             st.warning("Faltan jugadores registrados en Supabase o fechas de partidos para habilitar la votación.")
 
     with tab4:
-        st.markdown("<h3 style='text-align: center;'>🦜 Tabla de Loros (Ausencias en 2026 de jugadores frecuentes)</h3>", unsafe_allow_html=True)
+        st.subheader("Tabla de Loros 🦜 (Ausencias en 2026 de jugadores frecuentes históricos)")
         if not df_goals_date.empty:
+            # 1. Identificar a los jugadores más frecuentes de TODA la base histórica de Supabase (alineaciones)
             df_historico_total = df_goals_date.copy()
             df_historico_total.columns = [c.lower() for c in df_historico_total.columns]
             col_h_nick = next((c for c in ['player_nickname', 'nickname', 'jugador'] if c in df_historico_total.columns), df_historico_total.columns[1])
             
+            # Contamos cuántas apariciones tiene cada jugador en toda la historia
             frecuencia_historica = df_historico_total.groupby(col_h_nick)['fecha'].nunique().reset_index(name='total_partidos_historico')
+            
+            # Filtramos a los jugadores que realmente son frecuentes en la base (por ejemplo, con al menos 3 partidos jugados en su histórico, o el top 20)
             frecuencia_historica = frecuencia_historica.sort_values(by='total_partidos_historico', ascending=False)
             jugadores_frecuentes_base = frecuencia_historica[frecuencia_historica['total_partidos_historico'] >= 3][col_h_nick].tolist()
             
+            # Si la lista queda corta por el filtro, tomamos al menos el top 20 histórico para asegurarnos de incluir a todos los habituales como Sherman
             if len(jugadores_frecuentes_base) < 10:
                 jugadores_frecuentes_base = frecuencia_historica.head(20)[col_h_nick].tolist()
 
+            # 2. Cruce: Para cada uno de esos jugadores frecuentes, contamos cuántas de las fechas de 2026 NO jugaron (ausencias)
             df_panel = []
             for jugador in jugadores_frecuentes_base:
                 for f in fechas_jugadas_all:
@@ -398,73 +373,80 @@ try:
             
             df_panel = pd.merge(df_panel, df_fecha_player[['player_nickname', 'equipo', 'fecha']], on=['player_nickname', 'fecha'], how='left')
             missing_counts = df_panel[df_panel['equipo'].isna()].groupby('player_nickname').size().reset_index(name='numero_ausencias')
+            
+            # 3. Ordenar estrictamente la tabla de mayor a menor según las ausencias en 2026
             missing_counts = missing_counts.sort_values(by='numero_ausencias', ascending=False).rename(columns={'player_nickname': 'Jugador', 'numero_ausencias': 'Número de ausencias'})
             
-            _, col_ltbl, _ = st.columns([1, 2, 1])
-            with col_ltbl:
-                st.dataframe(missing_counts, use_container_width=True, hide_index=True)
+            st.dataframe(missing_counts, use_container_width=True, hide_index=True)
         else:
-            st.info("No hay datos para calcular ausencias.")
+            st.info("Faltan datos para calcular ausencias.")
 
     with tab5:
-        st.markdown("<h3 style='text-align: center;'>⚙️ Panel de Administración</h3>", unsafe_allow_html=True)
-        _, col_adm, _ = st.columns([1, 2, 1])
-        with col_adm:
-            password = st.text_input("Contraseña de Administrador", type="password")
+        st.subheader("⚙️ Panel de Administración")
+        password = st.text_input("Contraseña de Administrador", type="password")
+        
+        if password == ADMIN_PASSWORD and password is not None:
+            st.success("Acceso concedido.")
             
-            if password == ADMIN_PASSWORD and password is not None:
-                st.success("Acceso concedido.")
-                col_jugador_db_key = next((c for c in ['player_nickname', 'nickname', 'nombre'] if not df_players_db.empty and c in df_players_db.columns), None)
-                lista_jugadores_db = sorted(df_players_db[col_jugador_db_key].dropna().unique().tolist()) if not df_players_db.empty and col_jugador_db_key else []
+            col_jugador_db_key = next((c for c in ['player_nickname', 'nickname', 'nombre'] if not df_players_db.empty and c in df_players_db.columns), None)
+            lista_jugadores_db = sorted(df_players_db[col_jugador_db_key].dropna().unique().tolist()) if not df_players_db.empty and col_jugador_db_key else []
+            
+            with st.form("carga_partido_admin"):
+                st.markdown("### Registrar Alineación y Goles")
+                f_admin = st.date_input("Fecha del Partido").strftime("%d/%m/%Y")
                 
-                with st.form("carga_partido_admin"):
-                    st.markdown("#### Registrar Alineación y Goles")
-                    f_admin = st.date_input("Fecha del Partido").strftime("%d/%m/%Y")
+                if len(lista_jugadores_db) > 0:
+                    jugador_input = st.selectbox("Apodo / Nickname del Jugador", lista_jugadores_db)
+                else:
+                    jugador_input = st.text_input("Apodo / Nickname del Jugador (No hay jugadores cargados)")
                     
-                    if len(lista_jugadores_db) > 0:
-                        jugador_input = st.selectbox("Apodo / Nickname del Jugador", lista_jugadores_db)
+                equipo_input = st.selectbox("Equipo", ["Celeste", "Naranja"])
+                goles_input = st.number_input("Goles", min_value=0, step=1)
+                
+                if st.form_submit_button("Guardar en Supabase"):
+                    if not jugador_input:
+                        st.error("Debes seleccionar o ingresar un jugador.")
                     else:
-                        jugador_input = st.text_input("Apodo / Nickname del Jugador (No hay jugadores cargados)")
-                        
-                    equipo_input = st.selectbox("Equipo", ["Celeste", "Naranja"])
-                    goles_input = st.number_input("Goles", min_value=0, step=1)
-                    
-                    if st.form_submit_button("Guardar en Supabase"):
-                        if not jugador_input:
-                            st.error("Debes seleccionar o ingresar un jugador.")
-                        else:
-                            nuevo_registro = {"Fecha": f_admin, "Player_nickname": jugador_input, "Equipo": equipo_input, "Goles": goles_input}
-                            try:
-                                insert_data("alineaciones", nuevo_registro)
-                                st.success("¡Partido guardado correctamente en Supabase!")
-                                st.cache_data.clear()
-                                st.rerun()
-                            except Exception as db_err:
-                                st.error(f"Error al guardar: {db_err}")
+                        nuevo_registro = {
+                            "Fecha": f_admin,
+                            "Player_nickname": jugador_input,
+                            "Equipo": equipo_input,
+                            "Goles": goles_input
+                        }
+                        try:
+                            insert_data("alineaciones", nuevo_registro)
+                            st.success("¡Partido guardado correctamente en Supabase!")
+                            st.cache_data.clear()
+                            st.rerun()
+                        except Exception as db_err:
+                            st.error(f"Error al guardar: {db_err}")
+            
+            st.markdown("---")
+            with st.form("nuevo_jugador_admin"):
+                st.markdown("### Registrar Nuevo Jugador en la Base de Datos")
+                nuevo_nick = st.text_input("Apodo / Nickname (ej: Charly)")
+                nuevo_nombre = st.text_input("Nombre (opcional)")
+                nuevo_apellido = st.text_input("Apellido (opcional)")
                 
-                st.markdown("---")
-                with st.form("nuevo_jugador_admin"):
-                    st.markdown("#### Registrar Nuevo Jugador en la Base de Datos")
-                    nuevo_nick = st.text_input("Apodo / Nickname (ej: Charly)")
-                    nuevo_nombre = st.text_input("Nombre (opcional)")
-                    nuevo_apellido = st.text_input("Apellido (opcional)")
-                    
-                    if st.form_submit_button("Guardar Nuevo Jugador"):
-                        is_valid = bool(nuevo_nick and nuevo_nick.strip())
-                        if not is_valid:
-                            st.error("El apodo / nickname no puede estar vacío.")
-                        else:
-                            data_jugador = {"Player_nickname": nuevo_nick.strip(), "nombre": nuevo_nombre.strip(), "apellido": nuevo_apellido.strip()}
-                            try:
-                                insert_data("jugadores", data_jugador)
-                                st.success(f"¡Jugador '{nuevo_nick}' agregado con éxito a Supabase!")
-                                st.cache_data.clear()
-                                st.rerun()
-                            except Exception as j_err:
-                                st.error(f"Error al registrar jugador: {j_err}")
-                                
-            elif password:
-                st.error("Contraseña incorrecta.")
+                if st.form_submit_button("Guardar Nuevo Jugador"):
+                    if not nuevo_nick.strip():
+                        st.error("El apodo / nickname no puede estar vacío.")
+                    else:
+                        data_jugador = {
+                            "Player_nickname": nuevo_nick.strip(),
+                            "nombre": nuevo_nombre.strip(),
+                            "apellido": nuevo_apellido.strip()
+                        }
+                        try:
+                            insert_data("jugadores", data_jugador)
+                            st.success(f"¡Jugador '{nuevo_nick}' agregado con éxito a Supabase!")
+                            st.cache_data.clear()
+                            st.rerun()
+                        except Exception as j_err:
+                            st.error(f"Error al registrar jugador: {j_err}")
+                            
+        elif password:
+            st.error("Contraseña incorrecta.")
 
 except Exception as e:
     st.error(f"Error general en la aplicación: {e}")
