@@ -15,11 +15,12 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 st.set_page_config(page_title="Jueves del Cordero Susurrador", layout="wide", page_icon="⚽")
 
-# --- DISEÑO AVANZADO Y CENTRADO DE TABLAS ---
+# --- DISEÑO AVANZADO Y ESTÉTICA GAMIFIED / DARK MODE ---
 st.markdown("""
     <style>
     .main { background-color: #0b0f19; }
     
+    /* Tarjetas de estadísticas y contenedores con efecto glassmorphism */
     .metric-card {
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -29,20 +30,13 @@ st.markdown("""
         box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
     
+    /* Tipografía y espaciados limpios */
     h1, h2, h3 {
         letter-spacing: -0.5px;
         font-family: 'Inter', sans-serif;
     }
     
-    div[data-testid="stTable"] {
-        margin-left: auto;
-        margin-right: auto;
-    }
-    div[data-testid="stDataFrame"] {
-        display: flex;
-        justify-content: center;
-    }
-
+    /* Estilo de pestañas modernas */
     .stTabs [data-baseweb="tab-list"] {
         justify-content: center;
         gap: 12px;
@@ -179,6 +173,7 @@ try:
     with tab1:
         st.markdown("<h3 style='text-align: center;'>🏆 Resultados y Comentarios por Fecha</h3>", unsafe_allow_html=True)
         if len(fechas_jugadas_all) > 0:
+            # Centrar el selector de fecha usando columnas simétricas
             _, col_sel, _ = st.columns([1, 2, 1])
             with col_sel:
                 fecha_sel = st.selectbox(
@@ -194,6 +189,7 @@ try:
             celeste_goles = df_ultima_res.loc[df_ultima_res['equipo'] == 'Celeste', 'goles'].values[0] if 'Celeste' in df_ultima_res['equipo'].values else 0
             naranja_goles = df_ultima_res.loc[df_ultima_res['equipo'] == 'Naranja', 'goles'].values[0] if 'Naranja' in df_ultima_res['equipo'].values else 0
             
+            # Marcador visual llamativo y centrado
             m1, m2, m3, m4, m5 = st.columns([1, 2, 1, 2, 1])
             with m2:
                 st.markdown(f"<div class='metric-card'><h2>🔵 Celeste</h2><h1 style='color: #4da6ff;'>{int(celeste_goles)}</h1></div>", unsafe_allow_html=True)
@@ -207,6 +203,7 @@ try:
             st.markdown("---")
             st.markdown("<h4 style='text-align: center;'>📋 Alineación, Goles y Puntajes</h4>", unsafe_allow_html=True)
             
+            # --- OBTENCIÓN DE PUNTAJES ---
             df_form_puntaje_sel = pd.DataFrame(columns=['jugador', 'puntaje'])
             lista_puntos_combinada = []
             f_target = pd.to_datetime(fecha_sel).date()
@@ -285,10 +282,12 @@ try:
                 
             df_alineacion_final = pd.DataFrame(alineacion_data)
             
+            # Centrar la tabla usando contenedores de columnas simétricas (Truco definitivo en Streamlit)
             _, col_table, _ = st.columns([0.5, 9, 0.5])
             with col_table:
-                st.dataframe(df_alineacion_final.style.set_properties(**{'text-align': 'center'}), use_container_width=True, hide_index=True)
+                st.dataframe(df_alineacion_final, use_container_width=True, hide_index=True)
             
+            # --- SECCIÓN DE COMENTARIOS ---
             st.markdown("---")
             st.markdown("<h4 style='text-align: center;'>💬 Comentarios y Evaluaciones</h4>", unsafe_allow_html=True)
             
@@ -330,7 +329,7 @@ try:
                 
                 _, col_ctable, _ = st.columns([0.5, 9, 0.5])
                 with col_ctable:
-                    st.dataframe(df_comentarios_final.style.set_properties(**{'text-align': 'center'}), use_container_width=True, hide_index=True)
+                    st.dataframe(df_comentarios_final, use_container_width=True, hide_index=True)
             else:
                 st.info("No hay comentarios registrados para esta fecha.")
         else:
@@ -346,7 +345,7 @@ try:
             })
             _, col_gtbl, _ = st.columns([0.5, 9, 0.5])
             with col_gtbl:
-                st.dataframe(df_tabla_renamed.style.set_properties(**{'text-align': 'center'}), use_container_width=True, hide_index=True)
+                st.dataframe(df_tabla_renamed, use_container_width=True, hide_index=True)
         else:
             st.info("No hay datos generales suficientes.")
 
@@ -403,7 +402,7 @@ try:
             
             _, col_ltbl, _ = st.columns([1, 2, 1])
             with col_ltbl:
-                st.dataframe(missing_counts.style.set_properties(**{'text-align': 'center'}), use_container_width=True, hide_index=True)
+                st.dataframe(missing_counts, use_container_width=True, hide_index=True)
         else:
             st.info("No hay datos para calcular ausencias.")
 
@@ -455,15 +454,7 @@ try:
                         if not is_valid:
                             st.error("El apodo / nickname no puede estar vacío.")
                         else:
-                            # --- DETECCIÓN DINÁMICA DE COLUMNA PARA EVITAR ERRORES DE SCHEMA CACHE ---
-                            col_key_jugadores = "player_nickname"
-                            if not df_players_db.empty:
-                                for c in df_players_db.columns:
-                                    if c.lower() in ["player_nickname", "nickname", "jugador", "nombre_nick"]:
-                                        col_key_jugadores = c
-                                        break
-                            
-                            data_jugador = {col_key_jugadores: nuevo_nick.strip(), "nombre": nuevo_nombre.strip(), "apellido": nuevo_apellido.strip()}
+                            data_jugador = {"Player_nickname": nuevo_nick.strip(), "nombre": nuevo_nombre.strip(), "apellido": nuevo_apellido.strip()}
                             try:
                                 insert_data("jugadores", data_jugador)
                                 st.success(f"¡Jugador '{nuevo_nick}' agregado con éxito a Supabase!")
